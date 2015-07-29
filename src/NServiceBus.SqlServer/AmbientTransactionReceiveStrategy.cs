@@ -31,7 +31,7 @@ namespace NServiceBus.Transports.SQLServer
         {
             using (var scope = new TransactionScope(TransactionScopeOption.Required, transactionOptions))
             {
-                using (var connection = new SqlConnection(connectionString))
+                using (var connection = CreateConnection())
                 {
                     connection.Open();
                     using (pipelineExecutor.SetConnection(connectionString, connection))
@@ -67,6 +67,32 @@ namespace NServiceBus.Transports.SQLServer
                         }
                     }
                 }
+            }
+        }
+
+        SqlConnection CreateConnection()
+        {
+            var conn = new SqlConnection();
+            try
+            {
+                conn.ConnectionString = connectionString;
+                conn.Open();
+                DisableNoCount(conn);
+            }
+            catch
+            {
+                conn.Dispose();
+                throw;
+            }
+            return conn;
+        }
+
+        static void DisableNoCount(System.Data.IDbConnection connection)
+        {
+            using (var command = connection.CreateCommand())
+            {
+                command.CommandText = "SET NOCOUNT OFF";
+                command.ExecuteNonQuery();
             }
         }
     }
